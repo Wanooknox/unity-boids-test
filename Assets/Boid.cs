@@ -2,10 +2,11 @@
 using UnityEngine;
 
 public class Boid : MonoBehaviour {
-    private static float maxSpeed = 2f;
-    private static float friendRadius = 5f;
-    private static float coheseRadius = 2f;
-    private static Bounds bounds = new Bounds(Vector3.zero, new Vector3(16, 10));
+    private static float maxSpeed = 5;
+    private static float friendRadius = 2f;
+    private static float crowdRadius = 0.5f;
+    private static float coheseRadius = 5f;
+    private static Bounds bounds = new Bounds(Vector3.zero, new Vector3(18f, 10f));
 
     private Boid[] friendBoids;
 
@@ -13,28 +14,22 @@ public class Boid : MonoBehaviour {
 
     public Vector3 Pos {
         get { return transform.position; }
-        set {
-            if (float.IsNaN(value.x) || float.IsNaN(value.y)) {
-                print(value);
-            } else {
-                transform.position = value;
-            }
-        }
+        set { transform.position = value; }
     }
 
     private void Start() {
         Velocity = Vector3.zero;
+        UpdateFriends();
+        InvokeRepeating("UpdateFriends", Random.Range(0f, 5f), 2f);
     }
 
     private void Update() {
-        UpdateFriends();
-
-        DoUpdatePositionAndJunk();
-
+//        UpdateFriends();
+        CalcPositionAndRotation();
         WrapAround();
     }
 
-    private void DoUpdatePositionAndJunk() {
+    private void CalcPositionAndRotation() {
         var currBoid = this;
 
         Vector3 centerMass = CalcCenterMassVector();
@@ -42,7 +37,7 @@ public class Boid : MonoBehaviour {
         Vector3 matchSpeed = CalcMatchSpeedVector();
         Vector3 noise = new Vector3(1f, 1f) * Random.Range(-1f, 1f);
 
-        Velocity += centerMass * 1f;
+        Velocity += centerMass * 30f;
         Velocity += avoidance;
         Velocity += matchSpeed;
         Velocity += noise * 0.1f;
@@ -64,8 +59,6 @@ public class Boid : MonoBehaviour {
                 if (Vector3.Distance(allBoids[i].Pos, this.Pos) < friendRadius) {
                     nearby.Add(allBoids[i]);
                 }
-            } else {
-                Debug.Log("skipping self");
             }
         }
 
@@ -84,7 +77,7 @@ public class Boid : MonoBehaviour {
             }
         }
 
-        center = center / (friendBoids.Length - 1);
+        center = (friendBoids.Length > 1) ? center / (friendBoids.Length - 1) : Vector3.zero;
 
         return (center - this.Pos) / 100f;
     }
@@ -94,16 +87,12 @@ public class Boid : MonoBehaviour {
         Vector3 avoidance = Vector3.zero;
 
         for (int i = 0; i < friendBoids.Length; i++) {
-            if (friendBoids[i] != this) {
-                var bPos = friendBoids[i].Pos;
-                Vector3 diff = new Vector3() {
-                    x = Mathf.Abs(bPos.x - this.Pos.x),
-                    y = Mathf.Abs(bPos.y - this.Pos.y)
-                };
+            float dist = Vector3.Distance(Pos, friendBoids[i].Pos);
 
-                if (diff.magnitude < 0.5f) {
-                    avoidance -= (bPos - this.Pos);
-                }
+            if (dist > 0 && dist < crowdRadius) {
+                Vector3 diff = Vector3.Normalize(Pos - friendBoids[i].Pos);
+                diff = diff / dist;
+                avoidance += diff;
             }
         }
 
@@ -119,26 +108,15 @@ public class Boid : MonoBehaviour {
             }
         }
 
-        perceivedVelocity = perceivedVelocity / (friendBoids.Length - 1);
+        perceivedVelocity = (friendBoids.Length > 1) ? perceivedVelocity / (friendBoids.Length - 1) : Vector3.zero;
 
         return (perceivedVelocity - Velocity) / 8f;
     }
 
     private void WrapAround() {
-        var vector3 = Pos;
-
-        if (Pos.x >= bounds.max.x) {
-            vector3.x = bounds.min.x;
-        } else if (Pos.x <= bounds.min.x) {
-            vector3.x = bounds.min.x;
-        }
-
-        if (Pos.y >= bounds.max.y) {
-            vector3.y = bounds.min.y;
-        } else if (Pos.y <= bounds.min.y) {
-            vector3.y = bounds.min.y;
-        }
-
-        this.transform.position = vector3;
+        var dummy = Pos;
+        dummy.x = (Pos.x + bounds.size.x) % bounds.size.x;
+        dummy.y = (Pos.y + bounds.size.y) % bounds.size.y;
+        Pos = dummy;
     }
 }
