@@ -2,10 +2,18 @@
 using UnityEngine;
 
 public class Boid : MonoBehaviour {
-    private static float maxSpeed = 5;
-    private static float friendRadius = 2f;
-    private static float crowdRadius = 0.5f;
-    private static float coheseRadius = 5f;
+    [SerializeField]
+    private float maxSpeed = 5;
+
+    [SerializeField]
+    private float friendRadius = 2f;
+
+    [SerializeField]
+    private float crowdRadius = 0.5f;
+
+    [SerializeField]
+    private float coheseRadius = 5f;
+
     private static Bounds bounds = new Bounds(Vector3.zero, new Vector3(18f, 10f));
 
     private Boid[] friendBoids;
@@ -18,13 +26,13 @@ public class Boid : MonoBehaviour {
     }
 
     private void Start() {
-        Velocity = Vector3.zero;
-        UpdateFriends();
-        InvokeRepeating("UpdateFriends", Random.Range(0f, 5f), 2f);
+        Velocity = CalcNoiseVector();
+//        UpdateFriends();
+//        InvokeRepeating("UpdateFriends", Random.Range(0f, 5f), 2f);
     }
 
     private void Update() {
-//        UpdateFriends();
+        UpdateFriends();
         CalcPositionAndRotation();
         WrapAround();
     }
@@ -35,7 +43,7 @@ public class Boid : MonoBehaviour {
         Vector3 centerMass = CalcCenterMassVector();
         Vector3 avoidance = CalcAvoidanceVector();
         Vector3 matchSpeed = CalcMatchSpeedVector();
-        Vector3 noise = new Vector3(1f, 1f) * Random.Range(-1f, 1f);
+        Vector3 noise = CalcNoiseVector();
 
         Velocity += centerMass * 30f;
         Velocity += avoidance;
@@ -48,6 +56,10 @@ public class Boid : MonoBehaviour {
 
         // rotate to direction of velocity
         currBoid.transform.right = Velocity.normalized;
+    }
+
+    private static Vector3 CalcNoiseVector() {
+        return new Vector3(Random.Range(-1f, 1f), Random.Range(-1f, 1f));
     }
 
     private void UpdateFriends() {
@@ -72,8 +84,6 @@ public class Boid : MonoBehaviour {
         for (int i = 0; i < friendBoids.Length; i++) {
             if (friendBoids[i] != this) {
                 center += friendBoids[i].Pos;
-            } else {
-                Debug.Log("skipping self");
             }
         }
 

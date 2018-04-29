@@ -52,7 +52,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c57c2142d17f18549bd4b558c66b881c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Velocity: {x: 4.8324594, y: 1.2834864, z: 0}
+  maxSpeed: 5
+  friendRadius: 3
+  crowdRadius: 0.5
+  coheseRadius: 3
+  Velocity: {x: 0, y: 0, z: 0}
 --- !u!212 &212912920564212472
 SpriteRenderer:
   m_ObjectHideFlags: 1
