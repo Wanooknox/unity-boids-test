@@ -55,7 +55,9 @@ MonoBehaviour:
   maxSpeed: 5
   friendRadius: 3
   crowdRadius: 0.5
-  coheseRadius: 3
+  avoidRadius: 1
+  coheseRadius: 2
+  Avoids: []
   Velocity: {x: 0, y: 0, z: 0}
 --- !u!212 &212912920564212472
 SpriteRenderer:

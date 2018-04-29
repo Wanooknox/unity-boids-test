@@ -7,18 +7,20 @@ public class BoidManager : MonoBehaviour {
     [SerializeField]
     private int boidCount = 25;
 
-    private Boid[] friendBoids;
+    private Boid[] boids;
+
+    private Avoid[] avoids;
 
     // Use this for initialization
     void Start() {
+        avoids = FindObjectsOfType<Avoid>();
+
+
         SpawnSomeBoids(boidCount);
     }
 
-    // Update is called once per frame
-    void Update() { }
-
     private void SpawnSomeBoids(int count) {
-        friendBoids = new Boid[boidCount];
+        boids = new Boid[boidCount];
 
         for (int i = 0; i < count; i++) {
             var pos = new Vector3() {
@@ -27,7 +29,8 @@ public class BoidManager : MonoBehaviour {
             };
 
             var boid = Instantiate(boidPrefab, pos, Quaternion.identity);
-            friendBoids[i] = boid;
+            boid.Avoids = avoids;
+            boids[i] = boid;
         }
     }
 }

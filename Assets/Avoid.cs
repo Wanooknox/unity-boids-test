@@ -1,9 +1,7 @@
 ﻿using UnityEngine;
 
 public class Avoid : MonoBehaviour {
-    // Use this for initialization
-    void Start() { }
-
-    // Update is called once per frame
-    void Update() { }
+    public Vector3 Pos {
+        get { return transform.position; }
+    }
 }

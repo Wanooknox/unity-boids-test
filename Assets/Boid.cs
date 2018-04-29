@@ -12,9 +12,14 @@ public class Boid : MonoBehaviour {
     private float crowdRadius = 0.5f;
 
     [SerializeField]
+    private float avoidRadius = 1.5f;
+
+    [SerializeField]
     private float coheseRadius = 5f;
 
     private static Bounds bounds = new Bounds(Vector3.zero, new Vector3(18f, 10f));
+
+    public Avoid[] Avoids;
 
     private Boid[] friendBoids;
 
@@ -27,12 +32,12 @@ public class Boid : MonoBehaviour {
 
     private void Start() {
         Velocity = CalcNoiseVector();
-//        UpdateFriends();
-//        InvokeRepeating("UpdateFriends", Random.Range(0f, 5f), 2f);
+        UpdateFriends();
+        InvokeRepeating("UpdateFriends", Random.Range(0f, 5f), 2f);
     }
 
     private void Update() {
-        UpdateFriends();
+//        UpdateFriends();
         CalcPositionAndRotation();
         WrapAround();
     }
@@ -44,11 +49,13 @@ public class Boid : MonoBehaviour {
         Vector3 avoidance = CalcAvoidanceVector();
         Vector3 matchSpeed = CalcMatchSpeedVector();
         Vector3 noise = CalcNoiseVector();
+        Vector3 avoidsVec = CalcAvoidanceAvoidsVector();
 
         Velocity += centerMass * 30f;
         Velocity += avoidance;
         Velocity += matchSpeed;
         Velocity += noise * 0.1f;
+        Velocity += avoidsVec;
 
         Velocity = Vector3.ClampMagnitude(Velocity, maxSpeed);
 
@@ -59,7 +66,7 @@ public class Boid : MonoBehaviour {
     }
 
     private static Vector3 CalcNoiseVector() {
-        return new Vector3(Random.Range(-1f, 1f), Random.Range(-1f, 1f));
+        return new Vector3(Random.Range(-1f, 0f), Random.Range(-1f, 1f));
     }
 
     private void UpdateFriends() {
@@ -77,7 +84,6 @@ public class Boid : MonoBehaviour {
         friendBoids = nearby.ToArray();
     }
 
-
     private Vector3 CalcCenterMassVector() {
         Vector3 center = Vector3.zero;
 
@@ -92,7 +98,6 @@ public class Boid : MonoBehaviour {
         return (center - this.Pos) / 100f;
     }
 
-
     private Vector3 CalcAvoidanceVector() {
         Vector3 avoidance = Vector3.zero;
 
@@ -101,6 +106,22 @@ public class Boid : MonoBehaviour {
 
             if (dist > 0 && dist < crowdRadius) {
                 Vector3 diff = Vector3.Normalize(Pos - friendBoids[i].Pos);
+                diff = diff / dist;
+                avoidance += diff;
+            }
+        }
+
+        return avoidance;
+    }
+
+    private Vector3 CalcAvoidanceAvoidsVector() {
+        Vector3 avoidance = Vector3.zero;
+
+        for (int i = 0; i < Avoids.Length; i++) {
+            float dist = Vector3.Distance(Pos, Avoids[i].Pos);
+
+            if (dist > 0 && dist < avoidRadius) {
+                Vector3 diff = Vector3.Normalize(Pos - Avoids[i].Pos);
                 diff = diff / dist;
                 avoidance += diff;
             }
