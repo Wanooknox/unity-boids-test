@@ -6283,7 +6283,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   boidPrefab: {fileID: 114980900457157908, guid: bdaccb9d60339e24ba287e9ceb93a2a0,
     type: 2}
-  boidCount: 250
+  boidCount: 200
 --- !u!1001 &1584005514
 Prefab:
   m_ObjectHideFlags: 0
