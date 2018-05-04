@@ -21,7 +21,7 @@ public class JobBoid : MonoBehaviour {
 
     public Avoid[] Avoids;
 
-    private Boid[] friendBoids;
+    private JobBoid[] friendBoids;
 
     public Vector3 Velocity;
 
@@ -70,8 +70,8 @@ public class JobBoid : MonoBehaviour {
     }
 
     private void UpdateFriends() {
-        Boid[] allBoids = FindObjectsOfType<Boid>();
-        List<Boid> nearby = new List<Boid>();
+        JobBoid[] allBoids = FindObjectsOfType<JobBoid>();
+        List<JobBoid> nearby = new List<JobBoid>();
 
         for (int i = 0; i < allBoids.Length; i++) {
             if (allBoids[i] != this) {
