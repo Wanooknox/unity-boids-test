@@ -5,8 +5,6 @@ using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
 using UnityEngine;
 
-
-
 public class JobBoid : MonoBehaviour {
     private static Bounds bounds = new Bounds(Vector3.zero, new Vector3(18f, 10f));
     
@@ -21,8 +19,8 @@ public class JobBoid : MonoBehaviour {
     private JobHandle avoidanceJobHandle;
 
     // rule vectors
-    private Vector3 centerMass;
-    private Vector3 avoidance;
+    private NativeArray<Vector3> centerMass;
+    private NativeArray<Vector3> avoidance;
     private NativeArray<Vector3> friendPositions;
     
     private JobBoid[] friendBoids;
@@ -55,10 +53,14 @@ public class JobBoid : MonoBehaviour {
         WrapAround();
             
         friendPositions.Dispose();
+        centerMass.Dispose();
+        avoidance.Dispose();
     }
 
     private void ScheduleRuleJobs() {
         friendPositions = new NativeArray<Vector3>(friendBoids.Select(x => x.Pos).ToArray(), Allocator.TempJob);
+        centerMass = new NativeArray<Vector3>(1, Allocator.TempJob);
+        avoidance = new NativeArray<Vector3>(1, Allocator.TempJob);
 
         var centerMassJob = new CenterMassJob() {
             friendPositions = friendPositions,
@@ -85,7 +87,7 @@ public class JobBoid : MonoBehaviour {
         Vector3 noise = CalcNoiseVector();
         Vector3 avoidsVec = CalcAvoidanceAvoidsVector();
 
-        UpdateVelocity(centerMass, avoidance, matchSpeed, noise, avoidsVec);
+        UpdateVelocity(centerMass[0], avoidance[0], matchSpeed, noise, avoidsVec);
 
         var currBoid = this;
         currBoid.Pos += Velocity * Time.deltaTime;
@@ -141,7 +143,7 @@ public class JobBoid : MonoBehaviour {
         [ReadOnly] public NativeArray<Vector3> friendPositions;
         [ReadOnly] public Vector3 currPos;
 
-        public Vector3 centerMass;
+        public NativeArray<Vector3> centerMass;
 
         public void Execute() {
             Vector3 center = Vector3.zero;
@@ -152,7 +154,7 @@ public class JobBoid : MonoBehaviour {
 
             center = (friendPositions.Length > 1) ? center / (friendPositions.Length - 1) : center;
 
-            centerMass = (center - currPos) / 100f;
+            centerMass[0] = (center - currPos) / 100f;
         }
     }
 
@@ -177,7 +179,7 @@ public class JobBoid : MonoBehaviour {
         [ReadOnly] public Vector3 currPos;
         [ReadOnly] public float crowdRadius;
 
-        public Vector3 avoidance;
+        public NativeArray<Vector3> avoidance;
 
         public void Execute() {
             Vector3 avoidanceVec = Vector3.zero;
@@ -192,7 +194,7 @@ public class JobBoid : MonoBehaviour {
                 }
             }
 
-            avoidance = avoidanceVec;
+            avoidance[0] = avoidanceVec;
         }
     }
 
