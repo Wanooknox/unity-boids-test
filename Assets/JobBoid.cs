@@ -1,8 +1,11 @@
 ﻿using System.Linq;
 using System.Collections.Generic;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
 using UnityEngine;
+
+
 
 public class JobBoid : MonoBehaviour {
     private static Bounds bounds = new Bounds(Vector3.zero, new Vector3(18f, 10f));
@@ -15,11 +18,13 @@ public class JobBoid : MonoBehaviour {
 
     // job handles
     private JobHandle centerMassJobHandle;
-    
+    private JobHandle avoidanceJobHandle;
+
     // rule vectors
     private Vector3 centerMass;
+    private Vector3 avoidance;
     private NativeArray<Vector3> friendPositions;
-
+    
     private JobBoid[] friendBoids;
 
     public Avoid[] Avoids;
@@ -42,8 +47,18 @@ public class JobBoid : MonoBehaviour {
         ScheduleRuleJobs();
     }
 
+    private void LateUpdate() {
+        centerMassJobHandle.Complete();
+        avoidanceJobHandle.Complete();
+        
+        CalcPositionAndRotation();
+        WrapAround();
+            
+        friendPositions.Dispose();
+    }
+
     private void ScheduleRuleJobs() {
-        friendPositions = new NativeArray<Vector3>(friendBoids.Select(x => x.Pos).ToArray(), Allocator.Temp);
+        friendPositions = new NativeArray<Vector3>(friendBoids.Select(x => x.Pos).ToArray(), Allocator.TempJob);
 
         var centerMassJob = new CenterMassJob() {
             friendPositions = friendPositions,
@@ -51,20 +66,21 @@ public class JobBoid : MonoBehaviour {
             centerMass = centerMass
         };
 
-        centerMassJobHandle = centerMassJob.Schedule();
-    }
+        var avoidanceJob = new AvoidanceJob() {
+            friendPositions = friendPositions,
+            currPos = this.Pos,
+            crowdRadius = crowdRadius,
+            avoidance = avoidance
+        };
 
-    private void LateUpdate() {
-        centerMassJobHandle.Complete();
-        CalcPositionAndRotation();
-        WrapAround();
-        friendPositions.Dispose();
+        centerMassJobHandle = centerMassJob.Schedule();
+        avoidanceJobHandle = avoidanceJob.Schedule();
     }
 
     private void CalcPositionAndRotation() {
         
-//        centerMass = CalcCenterMassVector();
-        Vector3 avoidance = CalcAvoidanceVector();
+//        Vector3 centerMass = CalcCenterMassVector();
+//        Vector3 avoidance = CalcAvoidanceVector();
         Vector3 matchSpeed = CalcMatchSpeedVector();
         Vector3 noise = CalcNoiseVector();
         Vector3 avoidsVec = CalcAvoidanceAvoidsVector();
@@ -154,6 +170,30 @@ public class JobBoid : MonoBehaviour {
         }
 
         return avoidance;
+    }
+    
+    struct AvoidanceJob : IJob {
+        [ReadOnly] public NativeArray<Vector3> friendPositions;
+        [ReadOnly] public Vector3 currPos;
+        [ReadOnly] public float crowdRadius;
+
+        public Vector3 avoidance;
+
+        public void Execute() {
+            Vector3 avoidanceVec = Vector3.zero;
+
+            for (int i = 0; i < friendPositions.Length; i++) {
+                float dist = Vector3.Distance(currPos, friendPositions[i]);
+
+                if (dist > 0 && dist < crowdRadius) {
+                    Vector3 diff = Vector3.Normalize(currPos - friendPositions[i]);
+                    diff = diff / dist;
+                    avoidanceVec += diff;
+                }
+            }
+
+            avoidance = avoidanceVec;
+        }
     }
 
     private Vector3 CalcAvoidanceAvoidsVector() {
