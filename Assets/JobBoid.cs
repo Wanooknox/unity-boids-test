@@ -1,27 +1,28 @@
-﻿using System.Collections.Generic;
+﻿using System.Linq;
+using System.Collections.Generic;
+using Unity.Collections;
+using Unity.Jobs;
 using UnityEngine;
 
 public class JobBoid : MonoBehaviour {
-    [SerializeField]
-    private float maxSpeed = 5;
-
-    [SerializeField]
-    private float friendRadius = 2f;
-
-    [SerializeField]
-    private float crowdRadius = 0.5f;
-
-    [SerializeField]
-    private float avoidRadius = 1.5f;
-
-    [SerializeField]
-    private float coheseRadius = 5f;
-
     private static Bounds bounds = new Bounds(Vector3.zero, new Vector3(18f, 10f));
+    
+    [SerializeField] private float maxSpeed = 5;
+    [SerializeField] private float friendRadius = 2f;
+    [SerializeField] private float crowdRadius = 0.5f;
+    [SerializeField] private float avoidRadius = 1.5f;
+    [SerializeField] private float coheseRadius = 5f;
 
-    public Avoid[] Avoids;
+    // job handles
+    private JobHandle centerMassJobHandle;
+    
+    // rule vectors
+    private Vector3 centerMass;
+    private NativeArray<Vector3> friendPositions;
 
     private JobBoid[] friendBoids;
+
+    public Avoid[] Avoids;
 
     public Vector3 Velocity;
 
@@ -38,31 +39,53 @@ public class JobBoid : MonoBehaviour {
 
     private void Update() {
         UpdateFriends();
+        ScheduleRuleJobs();
+    }
+
+    private void ScheduleRuleJobs() {
+        friendPositions = new NativeArray<Vector3>(friendBoids.Select(x => x.Pos).ToArray(), Allocator.Temp);
+
+        var centerMassJob = new CenterMassJob() {
+            friendPositions = friendPositions,
+            currPos = this.Pos,
+            centerMass = centerMass
+        };
+
+        centerMassJobHandle = centerMassJob.Schedule();
+    }
+
+    private void LateUpdate() {
+        centerMassJobHandle.Complete();
         CalcPositionAndRotation();
         WrapAround();
+        friendPositions.Dispose();
     }
 
     private void CalcPositionAndRotation() {
-        var currBoid = this;
-
-        Vector3 centerMass = CalcCenterMassVector();
+        
+//        centerMass = CalcCenterMassVector();
         Vector3 avoidance = CalcAvoidanceVector();
         Vector3 matchSpeed = CalcMatchSpeedVector();
         Vector3 noise = CalcNoiseVector();
         Vector3 avoidsVec = CalcAvoidanceAvoidsVector();
 
+        UpdateVelocity(centerMass, avoidance, matchSpeed, noise, avoidsVec);
+
+        var currBoid = this;
+        currBoid.Pos += Velocity * Time.deltaTime;
+        // rotate to direction of velocity
+        currBoid.transform.right = Velocity.normalized;
+    }
+
+    private void UpdateVelocity(Vector3 centerMass, Vector3 avoidance, Vector3 matchSpeed, Vector3 noise,
+        Vector3 avoidsVec) {
         Velocity += centerMass * 30f;
         Velocity += avoidance;
         Velocity += matchSpeed;
         Velocity += noise * 0.1f;
         Velocity += avoidsVec;
-
+        
         Velocity = Vector3.ClampMagnitude(Velocity, maxSpeed);
-
-        currBoid.Pos += Velocity * Time.deltaTime;
-
-        // rotate to direction of velocity
-        currBoid.transform.right = Velocity.normalized;
     }
 
     private static Vector3 CalcNoiseVector() {
@@ -93,9 +116,28 @@ public class JobBoid : MonoBehaviour {
             }
         }
 
-        center = (friendBoids.Length > 1) ? center / (friendBoids.Length - 1) : Vector3.zero;
+        center = (friendBoids.Length > 1) ? center / (friendBoids.Length - 1) : center;
 
         return (center - this.Pos) / 100f;
+    }
+
+    struct CenterMassJob : IJob {
+        [ReadOnly] public NativeArray<Vector3> friendPositions;
+        [ReadOnly] public Vector3 currPos;
+
+        public Vector3 centerMass;
+
+        public void Execute() {
+            Vector3 center = Vector3.zero;
+
+            for (int i = 0; i < friendPositions.Length; i++) {
+                center += friendPositions[i];
+            }
+
+            center = (friendPositions.Length > 1) ? center / (friendPositions.Length - 1) : center;
+
+            centerMass = (center - currPos) / 100f;
+        }
     }
 
     private Vector3 CalcAvoidanceVector() {
@@ -139,7 +181,7 @@ public class JobBoid : MonoBehaviour {
             }
         }
 
-        perceivedVelocity = (friendBoids.Length > 1) ? perceivedVelocity / (friendBoids.Length - 1) : Vector3.zero;
+        perceivedVelocity = (friendBoids.Length > 1) ? perceivedVelocity / (friendBoids.Length - 1) : perceivedVelocity;
 
         return (perceivedVelocity - Velocity) / 8f;
     }

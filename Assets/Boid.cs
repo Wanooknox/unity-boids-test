@@ -32,12 +32,12 @@ public class Boid : MonoBehaviour {
 
     private void Start() {
         Velocity = CalcNoiseVector();
-        UpdateFriends();
-        InvokeRepeating("UpdateFriends", Random.Range(0f, 5f), 2f);
+//        UpdateFriends();
+//        InvokeRepeating("UpdateFriends", Random.Range(0f, 5f), 2f);
     }
 
     private void Update() {
-//        UpdateFriends();
+        UpdateFriends();
         CalcPositionAndRotation();
         WrapAround();
     }
@@ -93,7 +93,7 @@ public class Boid : MonoBehaviour {
             }
         }
 
-        center = (friendBoids.Length > 1) ? center / (friendBoids.Length - 1) : Vector3.zero;
+        center = (friendBoids.Length > 1) ? center / (friendBoids.Length - 1) : center;
 
         return (center - this.Pos) / 100f;
     }
@@ -139,7 +139,7 @@ public class Boid : MonoBehaviour {
             }
         }
 
-        perceivedVelocity = (friendBoids.Length > 1) ? perceivedVelocity / (friendBoids.Length - 1) : Vector3.zero;
+        perceivedVelocity = (friendBoids.Length > 1) ? perceivedVelocity / (friendBoids.Length - 1) : perceivedVelocity;
 
         return (perceivedVelocity - Velocity) / 8f;
     }

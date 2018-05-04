@@ -6285,7 +6285,7 @@ MonoBehaviour:
     type: 2}
   jobBoidPrefab: {fileID: 114850086726436888, guid: 3325878f48421584382bafd1a09823b0,
     type: 2}
-  boidCount: 100
+  boidCount: 150
   runJobBoids: 1
 --- !u!1001 &1584005514
 Prefab:
